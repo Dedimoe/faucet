@@ -14,6 +14,7 @@ import (
 // It quotes all identifiers, applies field selection, filtering, ordering,
 // and pagination using Oracle :N parameter placeholders.
 // Uses Oracle 12c+ OFFSET/FETCH syntax for pagination.
+/*
 func (c *OracleConnector) BuildSelect(_ context.Context, req connector.SelectRequest) (string, []interface{}, error) {
 	if req.Table == "" {
 		return "", nil, fmt.Errorf("table name is required")
@@ -73,6 +74,87 @@ func (c *OracleConnector) BuildSelect(_ context.Context, req connector.SelectReq
 
 	return b.String(), args, nil
 }
+*/
+
+
+//=================== compatible dengan oracle 11g ===========================
+
+// and pagination using Oracle :N parameter placeholders.
+// Uses Oracle 11g compatible ROWNUM syntax for pagination.
+func (c *OracleConnector) BuildSelect(_ context.Context, req connector.SelectRequest) (string, []interface{}, error) {
+	if req.Table == "" {
+		return "", nil, fmt.Errorf("table name is required")
+	}
+
+	var b strings.Builder
+	var args []interface{}
+	args = append(args, req.FilterArgs...)
+	paramIdx := len(args) + 1
+
+	// SELECT clause
+	b.WriteString("SELECT ")
+	b.WriteString(query.BuildSelectList(req.Projection, req.Fields, c.QuoteIdentifier))
+
+	// FROM clause
+	b.WriteString(" FROM ")
+	b.WriteString(c.QuoteIdentifier(c.schemaName))
+	b.WriteString(".")
+	b.WriteString(c.QuoteIdentifier(req.Table))
+
+	// WHERE clause
+	if req.Filter != "" {
+		b.WriteString(" WHERE ")
+		b.WriteString(req.Filter)
+	}
+
+	// GROUP BY clause
+	if gb := query.BuildGroupBy(req.GroupBy, c.QuoteIdentifier); gb != "" {
+		b.WriteString(" ")
+		b.WriteString(gb)
+	}
+
+	// ORDER BY clause
+	if req.Order != "" {
+		b.WriteString(" ORDER BY ")
+		b.WriteString(req.Order)
+	}
+
+	baseQuery := b.String()
+
+	// Oracle 11g pagination using ROWNUM
+	if req.Limit > 0 && req.Offset > 0 {
+		endRow := req.Offset + req.Limit
+		finalQuery := fmt.Sprintf(
+			"SELECT * FROM (SELECT a.*, ROWNUM rnum FROM (%s) a WHERE ROWNUM <= :%d) WHERE rnum > :%d",
+			baseQuery, paramIdx, paramIdx+1,
+		)
+		args = append(args, endRow, req.Offset)
+		return finalQuery, args, nil
+	}
+
+	if req.Limit > 0 {
+		finalQuery := fmt.Sprintf(
+			"SELECT * FROM (%s) WHERE ROWNUM <= :%d",
+			baseQuery, paramIdx,
+		)
+		args = append(args, req.Limit)
+		return finalQuery, args, nil
+	}
+
+	if req.Offset > 0 {
+		finalQuery := fmt.Sprintf(
+			"SELECT * FROM (SELECT a.*, ROWNUM rnum FROM (%s) a) WHERE rnum > :%d",
+			baseQuery, paramIdx,
+		)
+		args = append(args, req.Offset)
+		return finalQuery, args, nil
+	}
+
+	return baseQuery, args, nil
+}
+
+//============================================================================
+
 
 // BuildInsert constructs an INSERT query for Oracle.
 // Oracle does not support multi-row VALUES in a single INSERT, so for
