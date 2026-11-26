@@ -116,13 +116,10 @@ export function Sidebar({ currentPath, isOpen, onClose, onLogout }: {
         <div class="flex items-center gap-1 mt-1.5 pt-2.5 border-t border-line px-1">
           <div class="min-w-0 flex-1 px-1.5">
             <p class="text-xs text-fg truncate" title={email || undefined}>{email || 'Admin'}</p>
-            <a href={`${GITHUB_URL}/releases`} target="_blank" rel="noopener noreferrer" class="text-xs text-fg-faint hover:text-fg-muted font-mono">
-              {info?.version || ''}
+            <a href={`/`} target="_blank" rel="noopener noreferrer" class="text-xs text-fg-faint hover:text-fg-muted font-mono">
+              v0.1.15
             </a>
           </div>
-          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-8 h-8 rounded-[6px] text-fg-muted hover:text-fg hover:bg-panel-2" title="Faucet on GitHub" aria-label="Faucet on GitHub">
-            <Icon name="github" size={16} />
-          </a>
           <button
             type="button"
             class="inline-flex items-center justify-center w-8 h-8 rounded-[6px] text-fg-muted hover:text-fg hover:bg-panel-2"
