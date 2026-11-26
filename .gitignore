@@ -67,3 +67,5 @@ npm/win32-arm64/bin/
 # Docs (separate repo: faucetdb/wiki)
 docs/
 docs-site/
+
+internal/ui/dist
